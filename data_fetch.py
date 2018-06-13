@@ -18,7 +18,6 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 from sklearn.metrics import confusion_matrix
-from nolearn.decaf import ConvNetFeatures
 from sklearn.metrics import accuracy_score
 
 
@@ -90,8 +89,7 @@ class OcrData():
             m.close()
 
         if self.verbose:
-            print
-            'Found {} images.'.format(len(self.images))
+            print('Found {} images.'.format(len(self.images)))
 
         return self.images
 
@@ -133,11 +131,8 @@ class OcrData():
         values = list(map(str, range(10))) + list(string.ascii_lowercase) + list(string.ascii_lowercase)
 
         classes = dict(zip(keys, values))
-        self.labels = list(map(lambda x: classes[int(x)], self.labels))
+        self.labels = map(lambda x: classes[int(x)], self.labels)
 
-        if self.verbose:
-            print
-            'Found {} labels.'.format(len(self.labels))
 
         return self.labels
 
@@ -153,9 +148,10 @@ class OcrData():
         returns the same dictionary as before previously loaded and saved.
         """
 
+        #Uncomment the following code once the pickle file is generated
         #if self.from_pickle:
-         #   try:
-          #      with open(os.path.join(self.folder_data, self.pickle_data), 'rb') as fin:
+           #try:
+           #     with open(os.path.join(self.folder_data, self.pickle_data), 'rb') as fin:
            #         self.ocr = pickle.load(fin)
             #        if self.limit == 0:
              #           pass
@@ -179,7 +175,7 @@ class OcrData():
         image_labels = self.getLabels()
 
         if self.limit == 0:
-            complete = dict(zip(image_paths, image_labels))
+            complete = list(zip(image_paths, image_labels))
         else:
             complete = dict(zip(image_paths[:self.limit], image_labels[:self.limit]))
         n_images = len(complete)
@@ -315,7 +311,7 @@ class OcrData():
 
     def perform_convnet(self):
         """
-        trains a model on data using pre-trained NN to extract features and then using SVM with linear kernel.
+        trains a model on data using  SVM with linear kernel.
         """
         n_images = self.images_train.shape[0]
         print('Preparing to turn {} to RGB.'.format(n_images))

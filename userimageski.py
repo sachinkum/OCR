@@ -132,8 +132,7 @@ class UserData():
 
     def realign_text(self):
         """
-        processes the classified characters and reorders them in a 2D space
-        generating a matplotlib image.
+        processes the classified characters and prints them
         """
         max_maxrow = max(self.which_text['coordinates'][:, 2])
         min_mincol = min(self.which_text['coordinates'][:, 1])
@@ -147,42 +146,5 @@ class UserData():
 
         coordinates = [list(coordinate) for coordinate in coordinates]
         predicted = [list(letter) for letter in self.which_text['predicted_char']]
-        to_realign = zip(coordinates, predicted)
+        print(predicted)
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        for char in to_realign:
-            ax.text(char[0][1], char[0][2], char[1][0], size=16)
-        ax.set_ylim(-10, ymax + 10)
-        ax.set_xlim(-10, xmax + 10)
-        plt.show()
-
-    def plot_preprocessed_image(self):
-        """
-        plots pre-processed image. The plotted image is the same as obtained at the end
-        of the get_text_candidates method.
-        """
-        image = restoration.denoise_tv_chambolle(self.image, weight=0.1)
-        thresh = threshold_otsu(image)
-        bw = closing(image > thresh, square(2))
-        cleared = bw.copy()
-
-        label_image = measure.label(cleared)
-        borders = np.logical_xor(bw, cleared)
-
-        label_image[borders] = -1
-        image_label_overlay = label2rgb(label_image, image=image)
-
-        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(12, 12))
-        ax.imshow(image_label_overlay)
-
-        for region in regionprops(label_image):
-            if region.area < 10:
-                continue
-
-            minr, minc, maxr, maxc = region.bbox
-            rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
-                                      fill=False, edgecolor='red', linewidth=2)
-            ax.add_patch(rect)
-
-        plt.show()
