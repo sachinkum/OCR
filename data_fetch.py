@@ -130,10 +130,10 @@ class OcrData():
             m.close()
 
         keys = range(1, 63)
-        values = map(str, range(10)) + list(string.ascii_lowercase) + list(string.ascii_lowercase)
+        values = list(map(str, range(10))) + list(string.ascii_lowercase) + list(string.ascii_lowercase)
 
         classes = dict(zip(keys, values))
-        self.labels = map(lambda x: classes[int(x)], self.labels)
+        self.labels = list(map(lambda x: classes[int(x)], self.labels))
 
         if self.verbose:
             print
@@ -153,70 +153,70 @@ class OcrData():
         returns the same dictionary as before previously loaded and saved.
         """
 
-        if self.from_pickle:
-            try:
-                with open(os.path.join(self.folder_data, self.pickle_data), 'rb') as fin:
-                    self.ocr = pickle.load(fin)
-                    if self.limit == 0:
-                        pass
-                    else:
-                        self.ocr = {
-                            'images': self.ocr['images'][:self.limit],
-                            'data': self.ocr['data'][:self.limit],
-                            'target': self.ocr['target'][:self.limit]
-                        }
-                    if self.verbose:
-                        print('Loaded {} images each {} pixels'.format(self.ocr['images'].shape[0], self.img_size))
-                    return self.ocr
+        #if self.from_pickle:
+         #   try:
+          #      with open(os.path.join(self.folder_data, self.pickle_data), 'rb') as fin:
+           #         self.ocr = pickle.load(fin)
+            #        if self.limit == 0:
+             #           pass
+              #      else:
+               #         self.ocr = {
+                #            'images': self.ocr['images'][:self.limit],
+                 #           'data': self.ocr['data'][:self.limit],
+                  #          'target': self.ocr['target'][:self.limit]
+                   #     }
+                    #if self.verbose:
+                     #   print('Loaded {} images each {} pixels'.format(self.ocr['images'].shape[0], self.img_size))
+                    #return self.ocr
 
-            except IOError:
-                print('You have not provided a .pickle file to load data from!')
-                sys.exit(0)
+            #except IOError:
+             #   print('You have not provided a .pickle file to load data from!')
+              #  sys.exit(0)
 
 
+        #else:
+        image_paths = self.getRelativePath()
+        image_labels = self.getLabels()
+
+        if self.limit == 0:
+            complete = dict(zip(image_paths, image_labels))
         else:
-            image_paths = self.getRelativePath()
-            image_labels = self.getLabels()
+            complete = dict(zip(image_paths[:self.limit], image_labels[:self.limit]))
+        n_images = len(complete)
+        im = np.zeros((n_images,) + self.img_size)
+        labels = []
+        i = 0
 
-            if self.limit == 0:
-                complete = zip(image_paths, image_labels)
-            else:
-                complete = zip(image_paths[:self.limit], image_labels[:self.limit])
-            n_images = len(complete)
-            im = np.zeros((n_images,) + self.img_size)
-            labels = []
-            i = 0
+        for couple in complete:
+            image = imread(os.path.join(self.folder_data, couple[0] + '.png'), as_grey=True)
+            sh = image.shape
+            if ((sh[0] * sh[1]) >= (self.img_size[0] * self.img_size[1])):
+                im[i] = resize(image, self.img_size)
+                i += 1
+                labels.append(couple[1])
+        im = im[:len(labels)]
 
-            for couple in complete:
-                image = imread(os.path.join(self.folder_data, couple[0] + '.png'), as_grey=True)
-                sh = image.shape
-                if ((sh[0] * sh[1]) >= (self.img_size[0] * self.img_size[1])):
-                    im[i] = resize(image, self.img_size)
-                    i += 1
-                    labels.append(couple[1])
-            im = im[:len(labels)]
+        seed(10)
+        k = sample(range(len(im)), len(im))
+        im_shuf = im[k]
+        labels_shuf = np.array(labels)[k]
 
-            seed(10)
-            k = sample(range(len(im)), len(im))
-            im_shuf = im[k]
-            labels_shuf = np.array(labels)[k]
+        if self.verbose:
+            print('Loaded {} images each {} pixels'.format(len(labels), self.img_size))
 
-            if self.verbose:
-                print('Loaded {} images each {} pixels'.format(len(labels), self.img_size))
+        self.ocr = {
+            'images': im_shuf,
+            'data': im_shuf.reshape((im_shuf.shape[0], -1)),  # / 255.0
+            'target': labels_shuf
+        }
 
-            self.ocr = {
-                'images': im_shuf,
-                'data': im_shuf.reshape((im_shuf.shape[0], -1)),  # / 255.0
-                'target': labels_shuf
-            }
+        now = str(datetime.now()).replace(':', '-')
+        fname_out = 'images-{}-{}-{}.pickle'.format(len(labels), self.img_size, now)
+        full_name = os.path.join(self.folder_data, fname_out)
+        with open(full_name, 'wb') as fout:
+            pickle.dump(self.ocr, fout, -1)
 
-            now = str(datetime.now()).replace(':', '-')
-            fname_out = 'images-{}-{}-{}.pickle'.format(len(labels), self.img_size, now)
-            full_name = os.path.join(self.folder_data, fname_out)
-            with open(full_name, 'wb') as fout:
-                pickle.dump(self.ocr, fout, -1)
-
-            return self.ocr
+        return self.ocr
 
     def split_train_test(self):
         """
